@@ -1,14 +1,51 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Read};
 use std::io::Result;
 
-pub struct CharDictionary {
+pub struct ROM<'a> {
+    src: &'a str,
+    dict: CharDictionary,
+    buff: Vec<u8>
+}
+
+impl<'a> ROM<'a> {
+    pub fn new(src: &str) -> Result<ROM> {
+        let mut dict = CharDictionary::new()?;
+        let f = File::open(src)?;
+        let mut buff:Vec<u8> = Vec::new();
+        let mut reader = BufReader::new(f);
+
+        reader.read_to_end(&mut buff)?;
+
+        Ok(ROM {
+            src,
+            dict,
+            buff
+        })
+    }
+
+    pub fn print(&self) {
+        const LINE_SIZE: u8 = 128;
+
+        let mut i:u8 = 0;
+        for num in &self.buff {
+            match self.dict.get(*num) {
+                Some(entry) => print!("{}",entry),
+                None => print!("{}",num)
+            }
+            i+=1;
+            if i == LINE_SIZE { println!(""); i = 0; }
+        }
+    }
+}
+
+struct CharDictionary {
     dict: HashMap<u8, [u8;2]>
 }
 
 impl CharDictionary {
-    pub fn new() -> Result<CharDictionary> {
+    fn new() -> Result<CharDictionary> {
         let mut dict = HashMap::new();
         let f = File::open("dictionary.txt")?;
         let reader = BufReader::new(f);
@@ -23,7 +60,6 @@ impl CharDictionary {
                     if chunk.len() == 2 { chunk[1] }
                     else { 32 }
                 ]);
-                println!("#{} {}",i, char::from(chunk[0]));
                 if i < 255 { i = i + 1; }
             }
         }
@@ -31,7 +67,7 @@ impl CharDictionary {
         Ok(CharDictionary { dict })
     }
 
-    pub fn get(&mut self, i:u8) -> Option<String> {
+    fn get(&self, i:u8) -> Option<String> {
         let mut s = String::new();
         let chars = self.dict.get(&i).unwrap();
         s.push(chars[0].into());
