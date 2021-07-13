@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufRead, Read, Write, stdout, stdin, Result};
 use std::time::Duration;
+use core::slice::Iter;
 
 pub struct ROM<'a> {
     src: &'a str,
-    dict: CharDictionary,
+    pub dict: CharDictionary,
     file: File,
     buff: Vec<u8>,
 }
@@ -27,6 +28,17 @@ impl<'a> ROM<'a> {
         })
     }
 
+    pub fn size(&self) -> u32 {
+        self.buff.len() as u32
+    }
+
+    pub fn iterator_from(&self, i: u32) -> Iter<u8> {
+        let mut buff_iter = self.buff.iter();
+        // skip through i elements in the iterator
+        for _ in 0..i { buff_iter.next().unwrap(); }
+        buff_iter
+    }
+
     // fn print(&self) {
     //     let mut i:u8 = 0;
     //     for num in &self.buff {
@@ -40,7 +52,7 @@ impl<'a> ROM<'a> {
     // }
 }
 
-struct CharDictionary {
+pub struct CharDictionary {
     dict: HashMap<u8, [u8;2]>
 }
 
@@ -67,7 +79,7 @@ impl CharDictionary {
         Ok(CharDictionary { dict })
     }
 
-    fn get(&self, i:u8) -> Option<String> {
+    pub fn get(&self, i:u8) -> Option<String> {
         let mut s = String::new();
         let chars = self.dict.get(&i).unwrap();
         s.push(chars[0].into());
