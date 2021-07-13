@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufRead, Read, Write, stdout, stdin, Result};
-use std::time::Duration;
+use std::io::{BufReader, BufRead, Read, Result};
 use core::slice::Iter;
 
 pub struct ROM<'a> {
@@ -13,7 +12,7 @@ pub struct ROM<'a> {
 
 impl<'a> ROM<'a> {
     pub fn new(src: &str) -> Result<ROM> {
-        let mut dict = CharDictionary::new()?;
+        let dict = CharDictionary::new()?;
         let file = File::open(src)?;
         let mut buff:Vec<u8> = Vec::new();
         let mut reader = BufReader::new(&file);

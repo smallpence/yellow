@@ -9,15 +9,17 @@ const PRINT_INTERVAL: u32 = 64;
 pub struct ROMEditor<'a> {
     printed_count: usize,
     line: u32,
-    rom: &'a ROM<'a>
+    rom: &'a ROM<'a>,
+    rom_size_length: usize
 }
 
 impl<'a> ROMEditor<'a> {
     pub fn new(rom: &'a ROM) -> ROMEditor<'a> {
         ROMEditor {
             printed_count: 0,
-            line: 0xE8000,
-            rom
+            line: 0,
+            rom,
+            rom_size_length: format!("{:x}",rom.size()).len()
         }
     }
 
@@ -45,6 +47,22 @@ impl<'a> ROMEditor<'a> {
                     self.print_rom();
                 }
 
+                "goto" => {
+                    self.println(&String::from("where to?"));
+                    self.print(&String::from("0x"));
+                    self.flush();
+
+                    let result = i32::from_str_radix(self.stdin().to_lowercase().trim(),16);
+                    match result {
+                        Ok(i) => {
+                            let i = ((i as u32) / PRINT_INTERVAL) * PRINT_INTERVAL;
+                            self.println(&format!("now at {:01$x}", i, self.rom_size_length));
+                            self.line = i;
+                        }
+                        Err(_) => self.println(&String::from("bad hex"))
+                    }
+                }
+
                 "size" => {
                     self.println(&format!("rom size: {:#x}", self.rom.size()))
                 }
@@ -63,14 +81,12 @@ impl<'a> ROMEditor<'a> {
     }
 
     fn print_rom(&mut self) {
-        let rom_size_length = format!("{:x}",self.rom.size()).len();
-
         // begin printing in bold
         self.print(&String::from("\x1B[1m"));
 
         // print the hex from 0-PRINT_INTERVAL as well as a gap
         let t: String = (0..PRINT_INTERVAL).map(|x| format!("{:02x} ", x)).collect();
-        self.println(&format!("{} {}", " ".repeat(rom_size_length), t));
+        self.println(&format!("{} {}", " ".repeat(self.rom_size_length), t));
 
         // no more bold
         self.print(&String::from("\x1B[0m"));
@@ -88,7 +104,7 @@ impl<'a> ROMEditor<'a> {
                 };
                 line_hex.push_str(next.as_str());
             }
-            self.println(&format!("{:01$x} {2}", display_line, rom_size_length, line_hex));
+            self.println(&format!("{:01$x} {2}", display_line, self.rom_size_length, line_hex));
             display_line += PRINT_INTERVAL;
         }
     }
@@ -102,6 +118,13 @@ impl<'a> ROMEditor<'a> {
     fn println(&mut self, s: &String) {
         println!("{}",s);
         self.printed_count += 1;
+    }
+
+    fn stdin(&mut self) -> String {
+        let mut s = String::new();
+        stdin().read_line(&mut s).unwrap();
+        self.printed_count += 1;
+        s
     }
 
     fn init(&self) {

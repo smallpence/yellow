@@ -1,8 +1,6 @@
 mod editor;
 mod poke;
 
-use std::fs::File;
-use std::io::{BufReader, Read};
 use std::io::Result;
 
 fn main() -> Result<()> {
