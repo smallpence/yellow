@@ -1,17 +1,19 @@
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufRead, Read, Write};
-use std::io::Result;
+use std::io::{BufReader, BufRead, Read, Write, stdout, stdin, Result};
 use std::time::Duration;
 
 const LINE_SIZE: usize = 64;
-const LINE_COUNT: usize = 9;
+const ROM_LINE_COUNT: usize = 8;
+const LINE_COUNT: usize = ROM_LINE_COUNT + 2;
 
 pub struct ROM<'a> {
     src: &'a str,
     dict: CharDictionary,
     file: File,
-    buff: Vec<u8>
+    buff: Vec<u8>,
+    printed_count: usize,
+    line: u32
 }
 
 impl<'a> ROM<'a> {
@@ -27,32 +29,84 @@ impl<'a> ROM<'a> {
             src,
             dict,
             file,
-            buff
+            buff,
+            printed_count: 0,
+            line: 0
         })
     }
 
-    pub fn run(mut self) {
-        use std::io::stdout;
+    pub fn run(mut self) -> Result<()> {
+        // dump a bunch of blank lines
+        self.init();
 
-        print!(".\n.\n.\n");
+        let mut command = String::new();
 
+        // each branch MUST print 8 lines
         for i in 0..10 {
-            ROM::clear();
+            self.clear();
 
-            println!("LINE {}",i);
-            print!("{}",".\n".repeat(8));
-            stdout().flush();
+            self.println(&format!("POKEMON YELLOW ROM EDITOR | LINE: {}",self.line));
 
-            std::thread::sleep(Duration::from_secs(1));
+            match command.to_lowercase().trim() {
+                "help" => {
+                    self.println(&String::from("hello world!"));
+                }
+                _ => ()
+            }
+
+            self.flush();
+            command = self.command_prompt()?;
         }
+
+        Ok(())
     }
 
-    fn clear() {
+    // wrapper for print as well for consistency
+    fn print(&self, s: &String) {
+        print!("{}",s);
+    }
+
+    // println except it also tracks printed lines
+    fn println(&mut self, s: &String) {
+        println!("{}",s);
+        self.printed_count += 1;
+    }
+
+    fn init(&self) {
+        print!("{}","\n".repeat(LINE_COUNT));
         print!("{}", "\x1B[1F".repeat(LINE_COUNT));
+    }
+
+    fn clear(&mut self) {
+        // backtrack to start of gui using knowledge of printed lines
+        print!("{}", "\x1B[1F".repeat(self.printed_count));
+
+        // generated string that clears 1 line
         let clear = format!("{}\r\n"," ".repeat(LINE_SIZE));
-        print!("{}", clear.repeat(LINE_COUNT));
-        print!("{}","\x1B[1F".repeat(LINE_COUNT));
-        std::io::stdout().flush();
+
+        // print line_count amount of line clears
+        print!("{}", clear.repeat(self.printed_count));
+
+        // backtrack to start again
+        print!("{}","\x1B[1F".repeat(self.printed_count));
+
+        self.printed_count = 0;
+    }
+
+    // 1 line
+    fn command_prompt(&mut self) -> Result<String> {
+        print!(">>> ");
+        self.flush();
+        self.printed_count += 1;
+
+        let mut s = String::new();
+        stdin().read_line(&mut s)?;
+        Ok(s)
+    }
+
+    #[inline]
+    fn flush(&self) {
+        stdout().flush().unwrap();
     }
 
     // fn print(&self) {

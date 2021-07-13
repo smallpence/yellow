@@ -7,7 +7,7 @@ use std::io::Result;
 fn main() -> Result<()> {
     let rom = poke::ROM::new("../yellow.gbc")?;
 
-    rom.run();
+    rom.run()?;
 
     Ok(())
 }
