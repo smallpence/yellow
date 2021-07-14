@@ -29,7 +29,11 @@ impl<'a> ROMEditor<'a> {
 
         let mut command = String::new();
 
+
         loop {
+            // whether to prompt for a new command after this iteration, e.g. if user has already inputted
+            let mut skip_prompt = false;
+
             if command.eq("quit") { break }
 
             self.clear();
@@ -55,9 +59,8 @@ impl<'a> ROMEditor<'a> {
                     let result = i32::from_str_radix(self.stdin().to_lowercase().trim(),16);
                     match result {
                         Ok(i) => {
-                            let i = ((i as u32) / PRINT_INTERVAL) * PRINT_INTERVAL;
-                            self.println(&format!("now at {:01$x}", i, self.rom_size_length));
-                            self.line = i;
+                            self.line = ((i as u32) / PRINT_INTERVAL) * PRINT_INTERVAL;
+                            skip_prompt = true;
                         }
                         Err(_) => self.println(&String::from("bad hex"))
                     }
@@ -74,7 +77,10 @@ impl<'a> ROMEditor<'a> {
 
             self.flush();
 
-            command = self.command_prompt().trim().to_lowercase();
+            command = match skip_prompt {
+                true =>  String::new(),
+                false => self.command_prompt().trim().to_lowercase(),
+            }
         }
 
         Ok(())
