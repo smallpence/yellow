@@ -1,10 +1,10 @@
 mod editor;
-mod poke;
+mod rom;
 
 use std::io::Result;
 
 fn main() -> Result<()> {
-    let rom = poke::ROM::new("../yellow.gbc")?;
+    let rom = rom::ROM::new("../yellow.gbc")?;
     let rom_editor = editor::ROMEditor::new(&rom);
 
     rom_editor.run()?;

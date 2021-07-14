@@ -1,4 +1,4 @@
-use crate::poke::ROM;
+use crate::rom::ROM;
 use std::io::{Result, stdout, Write, stdin};
 
 const LINE_SIZE: usize = 200;
