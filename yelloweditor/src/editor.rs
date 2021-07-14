@@ -46,12 +46,12 @@ impl ROMEditor {
             match command.as_str() {
                 "d" => {
                     self.line += PRINT_INTERVAL * ROM_LINE_COUNT as RomSize;
-                    self.print_rom();
+                    self.print_rom(0);
                 }
 
                 "u" => {
                     self.line -= PRINT_INTERVAL * ROM_LINE_COUNT as RomSize;
-                    self.print_rom();
+                    self.print_rom(0);
                 }
 
                 "raw" => { self.raw = true;  skip_prompt = true; }
@@ -92,6 +92,8 @@ impl ROMEditor {
                 "write" => {
                     // needs to use closure to be able to use ?
                     let res = (|| -> Result<(),ParseIntError> {
+                        self.print_rom(4);
+
                         self.println_str("where to?");
                         self.print_str("0x");
                         self.flush();
@@ -116,7 +118,7 @@ impl ROMEditor {
                 }
 
                 _ => {
-                    self.print_rom();
+                    self.print_rom(0);
                 }
             }
 
@@ -131,7 +133,7 @@ impl ROMEditor {
         Ok(())
     }
 
-    fn print_rom(&mut self) {
+    fn print_rom(&mut self, lines_off: usize) {
         // begin printing in bold
         self.print(&String::from("\x1B[1m"));
 
@@ -146,7 +148,7 @@ impl ROMEditor {
         let mut lines_to_print: Vec<String> = Vec::new();
         // current line on the display
         let mut display_line = self.line;
-        for _ in 0..ROM_LINE_COUNT {
+        for _ in 0..ROM_LINE_COUNT - lines_off {
             let mut line_hex = String::new();
             for _ in 0..PRINT_INTERVAL {
                 // share same iterator across all loop iterators so its continuous
