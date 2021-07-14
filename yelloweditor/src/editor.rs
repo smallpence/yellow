@@ -10,7 +10,8 @@ pub struct ROMEditor<'a> {
     printed_count: usize,
     line: u32,
     rom: &'a ROM<'a>,
-    rom_size_length: usize
+    rom_size_length: usize,
+    raw: bool
 }
 
 impl<'a> ROMEditor<'a> {
@@ -19,7 +20,8 @@ impl<'a> ROMEditor<'a> {
             printed_count: 0,
             line: 0,
             rom,
-            rom_size_length: format!("{:x}",rom.size()).len()
+            rom_size_length: format!("{:x}",rom.size()).len(),
+            raw: false
         }
     }
 
@@ -50,6 +52,9 @@ impl<'a> ROMEditor<'a> {
                     self.line -= PRINT_INTERVAL * ROM_LINE_COUNT as u32;
                     self.print_rom();
                 }
+
+                "raw" => { self.raw = true;  skip_prompt = true; }
+                "eng" => { self.raw = false; skip_prompt = true; }
 
                 "goto" => {
                     self.println(&String::from("where to?"));
@@ -103,10 +108,17 @@ impl<'a> ROMEditor<'a> {
         for _ in 0..ROM_LINE_COUNT {
             let mut line_hex = String::new();
             for _ in 0..PRINT_INTERVAL {
+                // share same iterator across all loop iterators so its continuous
+                // does however ignore bounds checking ie whether iterator has any left
                 let next = rom_iter.next().unwrap();
-                let next = match self.rom.dict.get(*next) {
-                    Some(chars) => format!("{:} ", chars),
-                    None => format!("{:02x} ", next).to_uppercase()
+                let next = if self.raw {
+                    format!("{:02x} ", next).to_uppercase()
+                } else {
+                    if let Some(chars) = self.rom.dict.get(*next) {
+                        format!("{} ", chars)
+                    } else {
+                        format!("{:02x} ", next).to_uppercase()
+                    }
                 };
                 line_hex.push_str(next.as_str());
             }
