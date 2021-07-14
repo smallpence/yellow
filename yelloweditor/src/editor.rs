@@ -1,31 +1,32 @@
-use crate::rom::ROM;
-use std::io::{Result, stdout, Write, stdin};
+use crate::rom::{ROM, RomSize};
+use std::io::{Result as IOResult, stdout, Write, stdin};
+use std::num::ParseIntError;
 
 const LINE_SIZE: usize = 200;
 const ROM_LINE_COUNT: usize = 8;
 const LINE_COUNT: usize = ROM_LINE_COUNT + 3;
-const PRINT_INTERVAL: u32 = 64;
+const PRINT_INTERVAL: RomSize = 64;
 
-pub struct ROMEditor<'a> {
+pub struct ROMEditor {
     printed_count: usize,
-    line: u32,
-    rom: &'a ROM<'a>,
+    line: RomSize,
+    rom: ROM,
     rom_size_length: usize,
     raw: bool
 }
 
-impl<'a> ROMEditor<'a> {
-    pub fn new(rom: &'a ROM) -> ROMEditor<'a> {
+impl ROMEditor {
+    pub fn new(rom: ROM) -> ROMEditor {
         ROMEditor {
             printed_count: 0,
             line: 0,
+            rom_size_length: format!("{:x}",(&rom).size()).len(),
             rom,
-            rom_size_length: format!("{:x}",rom.size()).len(),
             raw: false
         }
     }
 
-    pub fn run(mut self) -> Result<()> {
+    pub fn run(mut self) -> IOResult<()> {
         // dump a bunch of blank lines
         self.init();
 
@@ -44,12 +45,12 @@ impl<'a> ROMEditor<'a> {
 
             match command.as_str() {
                 "d" => {
-                    self.line += PRINT_INTERVAL * ROM_LINE_COUNT as u32;
+                    self.line += PRINT_INTERVAL * ROM_LINE_COUNT as RomSize;
                     self.print_rom();
                 }
 
                 "u" => {
-                    self.line -= PRINT_INTERVAL * ROM_LINE_COUNT as u32;
+                    self.line -= PRINT_INTERVAL * ROM_LINE_COUNT as RomSize;
                     self.print_rom();
                 }
 
@@ -64,7 +65,7 @@ impl<'a> ROMEditor<'a> {
                     let result = i32::from_str_radix(self.input_from_stdin().to_lowercase().trim(), 16);
                     match result {
                         Ok(i) => {
-                            self.line = ((i as u32) / PRINT_INTERVAL) * PRINT_INTERVAL;
+                            self.line = ((i as RomSize) / PRINT_INTERVAL) * PRINT_INTERVAL;
                             skip_prompt = true;
                         }
                         Err(_) => self.println_str("bad hex")
@@ -85,6 +86,32 @@ impl<'a> ROMEditor<'a> {
                     match self.rom.write_to_disk(&src) {
                         Ok(_)        => self.println(&format!("successfully wrote to {}", src)),
                         Err(e) => self.println(&format!("error could not write: {:?}",e))
+                    }
+                }
+
+                "write" => {
+                    // needs to use closure to be able to use ?
+                    let res = (|| -> Result<(),ParseIntError> {
+                        self.println_str("where to?");
+                        self.print_str("0x");
+                        self.flush();
+
+                        let i = i32::from_str_radix(self.input_from_stdin().to_lowercase().trim(), 16)?;
+
+                        self.println_str("what byte?");
+                        self.print_str("0x");
+                        self.flush();
+                        let b= i32::from_str_radix(self.input_from_stdin().to_lowercase().trim(), 16)? as u8;
+
+                        self.rom.set_byte(i,b);
+
+                        skip_prompt = true;
+
+                        Ok(())
+                    })();
+
+                    if let Err(e) = res {
+                        self.println(&format!("{:?}",e));
                     }
                 }
 
@@ -116,6 +143,7 @@ impl<'a> ROMEditor<'a> {
         self.print(&String::from("\x1B[0m"));
 
         let mut rom_iter = self.rom.iterator_from(self.line);
+        let mut lines_to_print: Vec<String> = Vec::new();
         // current line on the display
         let mut display_line = self.line;
         for _ in 0..ROM_LINE_COUNT {
@@ -135,9 +163,11 @@ impl<'a> ROMEditor<'a> {
                 };
                 line_hex.push_str(next.as_str());
             }
-            self.println(&format!("{:01$x} {2}", display_line, self.rom_size_length, line_hex));
+            lines_to_print.push(format!("{:01$x} {2}", display_line, self.rom_size_length, line_hex));
             display_line += PRINT_INTERVAL;
         }
+
+        lines_to_print.iter().map(|line| self.println(line)).for_each(drop);
     }
 
     // wrapper for print as well for consistency

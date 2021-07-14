@@ -2,36 +2,42 @@ use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufRead, Read, Result, BufWriter, Write};
 use core::slice::Iter;
+use std::fmt::{Display, Formatter};
 
-pub struct ROM<'a> {
-    src: &'a str,
+pub type RomSize = i32;
+pub struct ROM {
     pub dict: CharDictionary,
     file: File,
     buff: Vec<u8>,
 }
 
-impl<'a> ROM<'a> {
-    pub fn new(src: &str) -> Result<ROM> {
+impl Display for ROM {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("rom")
+    }
+}
+
+impl ROM {
+    pub fn new(src: String) -> Result<ROM> {
         let dict = CharDictionary::new()?;
-        let file = File::open(src)?;
+        let file = File::open(&src)?;
         let mut buff:Vec<u8> = Vec::new();
         let mut reader = BufReader::new(&file);
 
         reader.read_to_end(&mut buff)?;
 
         Ok(ROM {
-            src,
             dict,
             file,
             buff,
         })
     }
 
-    pub fn size(&self) -> u32 {
-        self.buff.len() as u32
+    pub fn size(&self) -> RomSize {
+        self.buff.len() as RomSize
     }
 
-    pub fn iterator_from(&self, i: u32) -> Iter<u8> {
+    pub fn iterator_from(&self, i: RomSize) -> Iter<u8> {
         let mut buff_iter = self.buff.iter();
         // skip through i elements in the iterator
         for _ in 0..i { buff_iter.next().unwrap(); }
@@ -39,16 +45,19 @@ impl<'a> ROM<'a> {
     }
 
     pub fn write_to_disk(&self, src: &String) -> Result<()> {
-
         let file = OpenOptions::new()
             .write(true)
             .create(true)
             .open(src)?;
 
         let mut writer = BufWriter::new(&file);
-        writer.write_all(self.buff.as_slice());
+        writer.write_all(self.buff.as_slice())?;
 
         Ok(())
+    }
+
+    pub fn set_byte(&mut self, i: RomSize, b: u8) {
+        self.buff[i as usize] = b;
     }
 }
 
