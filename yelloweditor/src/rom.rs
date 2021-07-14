@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufReader, BufRead, Read, Result};
+use std::fs::{File, OpenOptions};
+use std::io::{BufReader, BufRead, Read, Result, BufWriter, Write};
 use core::slice::Iter;
 
 pub struct ROM<'a> {
@@ -38,17 +38,18 @@ impl<'a> ROM<'a> {
         buff_iter
     }
 
-    // fn print(&self) {
-    //     let mut i:u8 = 0;
-    //     for num in &self.buff {
-    //         match self.dict.get(*num) {
-    //             Some(entry) => print!("{}",entry),
-    //             None => print!("{}",num)
-    //         }
-    //         i+=1;
-    //         if i == LINE_SIZE { println!(""); i = 0; }
-    //     }
-    // }
+    pub fn write_to_disk(&self, src: &String) -> Result<()> {
+
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(src)?;
+
+        let mut writer = BufWriter::new(&file);
+        writer.write_all(self.buff.as_slice());
+
+        Ok(())
+    }
 }
 
 pub struct CharDictionary {

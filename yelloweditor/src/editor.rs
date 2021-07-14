@@ -57,22 +57,35 @@ impl<'a> ROMEditor<'a> {
                 "eng" => { self.raw = false; skip_prompt = true; }
 
                 "goto" => {
-                    self.println(&String::from("where to?"));
-                    self.print(&String::from("0x"));
+                    self.println_str("where to?");
+                    self.print_str("0x");
                     self.flush();
 
-                    let result = i32::from_str_radix(self.stdin().to_lowercase().trim(),16);
+                    let result = i32::from_str_radix(self.input_from_stdin().to_lowercase().trim(), 16);
                     match result {
                         Ok(i) => {
                             self.line = ((i as u32) / PRINT_INTERVAL) * PRINT_INTERVAL;
                             skip_prompt = true;
                         }
-                        Err(_) => self.println(&String::from("bad hex"))
+                        Err(_) => self.println_str("bad hex")
                     }
                 }
 
                 "size" => {
                     self.println(&format!("rom size: {:#x}", self.rom.size()))
+                }
+
+                "save" => {
+                    self.println_str("where to?");
+                    self.print_str("src: ");
+                    self.flush();
+
+                    let src = self.input_from_stdin().trim().to_string();
+
+                    match self.rom.write_to_disk(&src) {
+                        Ok(_)        => self.println(&format!("successfully wrote to {}", src)),
+                        Err(e) => self.println(&format!("error could not write: {:?}",e))
+                    }
                 }
 
                 _ => {
@@ -131,14 +144,16 @@ impl<'a> ROMEditor<'a> {
     fn print(&self, s: &String) {
         print!("{}",s);
     }
+    fn print_str(&self, s: &str) { self.print(&String::from(s)) }
 
     // println except it also tracks printed lines
     fn println(&mut self, s: &String) {
         println!("{}",s);
         self.printed_count += 1;
     }
+    fn println_str(&mut self, s: &str) { self.println(&String::from(s)) }
 
-    fn stdin(&mut self) -> String {
+    fn input_from_stdin(&mut self) -> String {
         let mut s = String::new();
         stdin().read_line(&mut s).unwrap();
         self.printed_count += 1;
