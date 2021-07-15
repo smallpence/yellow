@@ -1,6 +1,7 @@
 use crate::rom::{ROM, RomSize};
-use std::io::{Result as IOResult, stdout, Write, stdin};
+use std::io::{Result as IOResult, stdout, Write, stdin, BufRead};
 use std::num::ParseIntError;
+use std::str::{from_utf8};
 
 const LINE_SIZE: usize = 200;
 const ROM_LINE_COUNT: usize = 8;
@@ -98,14 +99,19 @@ impl ROMEditor {
                         self.print_str("0x");
                         self.flush();
 
-                        let i = i32::from_str_radix(self.input_from_stdin().to_lowercase().trim(), 16)?;
+                        let mut i = i32::from_str_radix(self.input_from_stdin().to_lowercase().trim(), 16)?;
 
-                        self.println_str("what byte?");
+                        self.println_str("what byte(s)?");
                         self.print_str("0x");
                         self.flush();
-                        let b= i32::from_str_radix(self.input_from_stdin().to_lowercase().trim(), 16)? as u8;
-
-                        self.rom.set_byte(i,b);
+                        // let b= i32::from_str_radix(self.input_from_stdin().to_lowercase().trim(), 16)? as u8;
+                        let bytes = self.input_from_stdin().to_lowercase().trim().to_string();
+                        for b in bytes.as_bytes().chunks(2) {
+                            let b = from_utf8(b).unwrap();
+                            let b = i32::from_str_radix(b, 16)? as u8;
+                            self.rom.set_byte(i,b);
+                            i += 1;
+                        }
 
                         skip_prompt = true;
 
